@@ -1,0 +1,47 @@
+# Development
+.DS_Store
+.git
+.gitignore
+.eslintrc*
+*.log
+node_modules
+.next
+.turbo
+dist
+build
+
+# Web dev files
+web/.next
+web/node_modules
+web/.env*
+web/coverage
+web/.turbo
+
+# Tests & CI
+*.test.ts
+*.test.js
+.github/workflows
+.eslint*
+jest.config.js
+tsconfig.test.json
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*.sublime-*
+
+# Misc
+.env
+.env.local
+.env.*.local
+npm-debug.log*
+yarn-debug.log*
+
+# Documentation
+docs/
+examples/
+*.md
+!README.md
+!NPM_README.md

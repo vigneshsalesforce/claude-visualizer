@@ -1,0 +1,913 @@
+<title>Transcript Replay</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  :root {
+    --bg: #eff1f0;
+    --surface: #ffffff;
+    --surface-2: #e6e9e7;
+    --ink: #1b1f27;
+    --ink-muted: #5b6472;
+    --border: #d6dad7;
+    --accent: #8a5a12;
+    --accent-ink: #ffffff;
+    --user: #2c5aa0;
+    --success: #0e7a5f;
+    --error: #b0362c;
+    --subagent: #6a3fa0;
+    --shadow: 0 1px 2px rgba(20, 24, 20, 0.06);
+    --mono: ui-monospace, "SF Mono", "Cascadia Code", "Roboto Mono", Menlo, Consolas, monospace;
+    --sans: ui-sans-serif, "Segoe UI", system-ui, Roboto, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0d0f13;
+      --surface: #161a21;
+      --surface-2: #1e232c;
+      --ink: #e7e9ee;
+      --ink-muted: #8b93a3;
+      --border: #2a303b;
+      --accent: #e3a93b;
+      --accent-ink: #14100a;
+      --user: #7fa8e0;
+      --success: #4cc9a6;
+      --error: #e5695c;
+      --subagent: #b694e8;
+      --shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0d0f13;
+    --surface: #161a21;
+    --surface-2: #1e232c;
+    --ink: #e7e9ee;
+    --ink-muted: #8b93a3;
+    --border: #2a303b;
+    --accent: #e3a93b;
+    --accent-ink: #14100a;
+    --user: #7fa8e0;
+    --success: #4cc9a6;
+    --error: #e5695c;
+    --subagent: #b694e8;
+    --shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  }
+  :root[data-theme="light"] {
+    --bg: #eff1f0;
+    --surface: #ffffff;
+    --surface-2: #e6e9e7;
+    --ink: #1b1f27;
+    --ink-muted: #5b6472;
+    --border: #d6dad7;
+    --accent: #8a5a12;
+    --accent-ink: #ffffff;
+    --user: #2c5aa0;
+    --success: #0e7a5f;
+    --error: #b0362c;
+    --subagent: #6a3fa0;
+    --shadow: 0 1px 2px rgba(20, 24, 20, 0.06);
+  }
+
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  body { min-height: 100vh; }
+
+  .app { display: flex; flex-direction: column; min-height: 100vh; }
+
+  .toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.6rem 1rem;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    box-shadow: var(--shadow);
+  }
+  .toolbar h1 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin: 0 0.75rem 0 0;
+    white-space: nowrap;
+  }
+  .btn {
+    font: inherit;
+    font-family: var(--sans);
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: var(--ink);
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 0.4rem 0.7rem;
+    cursor: pointer;
+  }
+  .btn:hover { border-color: var(--accent); }
+  .btn:focus-visible, input:focus-visible, .row summary:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  .btn.primary {
+    background: var(--accent);
+    color: var(--accent-ink);
+    border-color: var(--accent);
+  }
+  .filter-input {
+    font: inherit;
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    padding: 0.4rem 0.6rem;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    background: var(--surface);
+    color: var(--ink);
+    min-width: 12rem;
+  }
+  .toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.8rem;
+    color: var(--ink-muted);
+    white-space: nowrap;
+  }
+  .stats {
+    margin-left: auto;
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    color: var(--ink-muted);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .main {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    padding: 1.25rem 1rem 4rem;
+  }
+  .sheet {
+    width: 100%;
+    max-width: 1000px;
+  }
+
+  .dropzone {
+    border: 1.5px dashed var(--border);
+    border-radius: 10px;
+    padding: 2.5rem 1.5rem;
+    text-align: center;
+    color: var(--ink-muted);
+    background: var(--surface);
+  }
+  .dropzone.drag { border-color: var(--accent); color: var(--ink); }
+  .dropzone h2 { margin: 0 0 0.4rem; font-size: 1.05rem; color: var(--ink); }
+  .dropzone p { margin: 0.25rem 0; font-size: 0.85rem; }
+  .dropzone code {
+    font-family: var(--mono);
+    background: var(--surface-2);
+    padding: 0.1rem 0.35rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+  }
+
+  .parse-warning {
+    margin: 0.75rem 0;
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    background: color-mix(in srgb, var(--error) 12%, var(--surface));
+    border: 1px solid color-mix(in srgb, var(--error) 40%, var(--border));
+    color: var(--error);
+    font-size: 0.8rem;
+    font-family: var(--mono);
+  }
+
+  .timeline { position: relative; margin-top: 0.75rem; }
+
+  .node { position: relative; }
+  .node-children {
+    margin-left: 1.15rem;
+    padding-left: 0.85rem;
+    border-left: 1.5px solid var(--border);
+  }
+
+  .row {
+    display: block;
+    margin: 0.3rem 0;
+  }
+  .row-head {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    padding: 0.35rem 0.55rem;
+    border-radius: 6px;
+    cursor: pointer;
+    list-style: none;
+  }
+  .row-head::-webkit-details-marker { display: none; }
+  .row-head:hover { background: var(--surface-2); }
+
+  .glyph {
+    flex: none;
+    width: 1.4rem;
+    height: 1.4rem;
+    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: #fff;
+  }
+  .glyph.user { background: var(--user); }
+  .glyph.assistant { background: var(--accent); color: var(--accent-ink); }
+  .glyph.tool { background: var(--surface-2); color: var(--ink-muted); border: 1px solid var(--border); }
+  .glyph.subagent { background: var(--subagent); }
+  .glyph.thinking { background: var(--surface-2); color: var(--ink-muted); border: 1px solid var(--border); }
+
+  .time {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--ink-muted);
+    font-variant-numeric: tabular-nums;
+    flex: none;
+  }
+  .summary-text {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.86rem;
+  }
+  .summary-text .toolname {
+    font-family: var(--mono);
+    font-weight: 600;
+    margin-right: 0.4rem;
+  }
+  .chip {
+    flex: none;
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    font-variant-numeric: tabular-nums;
+    padding: 0.12rem 0.4rem;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    color: var(--ink-muted);
+    white-space: nowrap;
+  }
+  .chip.ok { color: var(--success); border-color: color-mix(in srgb, var(--success) 45%, var(--border)); }
+  .chip.err { color: var(--error); border-color: color-mix(in srgb, var(--error) 45%, var(--border)); }
+  .chip.pending { color: var(--ink-muted); }
+
+  .detail {
+    margin: 0.15rem 0 0.5rem 2.6rem;
+    padding: 0.6rem 0.75rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  .detail pre {
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    white-space: pre-wrap;
+    word-break: break-word;
+    margin: 0;
+    max-height: 320px;
+    overflow: auto;
+  }
+  .detail .field-label {
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--ink-muted);
+    margin: 0.5rem 0 0.2rem;
+  }
+  .detail .field-label:first-child { margin-top: 0; }
+  .prose-text {
+    font-size: 0.88rem;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .placeholder {
+    margin: 0.15rem 0 0.5rem 2.6rem;
+    padding: 0.5rem 0.75rem;
+    border: 1.5px dashed var(--border);
+    border-radius: 8px;
+    font-size: 0.78rem;
+    color: var(--ink-muted);
+  }
+  .placeholder.drag { border-color: var(--subagent); color: var(--ink); }
+
+  .stat-strip {
+    display: flex;
+    gap: 0.9rem;
+    flex-wrap: wrap;
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--ink-muted);
+    font-variant-numeric: tabular-nums;
+    margin-bottom: 0.5rem;
+  }
+  .stat-strip b { color: var(--ink); font-weight: 600; }
+
+  .hidden-by-filter { display: none !important; }
+
+  footer.note {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 0 1rem 2rem;
+    font-size: 0.78rem;
+    color: var(--ink-muted);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .row-head { transition: background-color 120ms ease; }
+  }
+</style>
+
+<div class="app">
+  <div class="toolbar">
+    <h1>Transcript Replay</h1>
+    <button class="btn primary" id="loadBtn" type="button">Load .jsonl file(s)</button>
+    <input type="file" id="fileInput" accept=".jsonl,.json,.txt" multiple hidden />
+    <button class="btn" id="expandAllBtn" type="button">Expand all</button>
+    <button class="btn" id="collapseAllBtn" type="button">Collapse all</button>
+    <input class="filter-input" id="filterInput" type="text" placeholder="Filter (tool name, text)…" />
+    <label class="toggle"><input type="checkbox" id="systemToggle" /> Show system events</label>
+    <span class="stats" id="statsLine"></span>
+  </div>
+
+  <div class="main">
+    <div class="sheet">
+      <div class="dropzone" id="dropzone">
+        <h2>Drop one or more session transcripts here</h2>
+        <p>Claude Code writes these as <code>.jsonl</code> under <code>~/.claude/projects/&lt;project&gt;/</code>.</p>
+        <p>Load a main session file, plus any <code>subagents/agent-&lt;id&gt;.jsonl</code> files, to see subagent dispatches expand inline.</p>
+      </div>
+      <div id="parseWarnings"></div>
+      <div class="timeline" id="timeline"></div>
+    </div>
+  </div>
+
+  <footer class="note">
+    Parsed and rendered entirely in your browser — no file ever leaves this page.
+    Part of <code>claude-demo</code>'s agents/skills/hooks visualizer.
+  </footer>
+</div>
+
+<script>
+  /* ---- shared_render.js, inlined for a self-contained artifact ---- */
+  (function (global) {
+    'use strict';
+
+    function parseJSONL(text) {
+      var lines = text.split('\n');
+      var records = [];
+      var parseErrorCount = 0;
+      for (var i = 0; i < lines.length; i++) {
+        var line = lines[i].trim();
+        if (!line) continue;
+        try {
+          records.push(JSON.parse(line));
+        } catch (e) {
+          parseErrorCount++;
+        }
+      }
+      return { records: records, parseErrorCount: parseErrorCount };
+    }
+
+    function extractText(content) {
+      if (typeof content === 'string') return content;
+      if (Array.isArray(content)) {
+        return content
+          .map(function (b) {
+            if (typeof b === 'string') return b;
+            if (b && b.type === 'text') return b.text;
+            return '';
+          })
+          .join('\n');
+      }
+      return '';
+    }
+
+    function buildToolCallIndex(records) {
+      var toolCalls = new Map();
+
+      for (var i = 0; i < records.length; i++) {
+        var r = records[i];
+        if (r.type === 'assistant' && r.message && Array.isArray(r.message.content)) {
+          for (var j = 0; j < r.message.content.length; j++) {
+            var block = r.message.content[j];
+            if (block.type === 'tool_use') {
+              toolCalls.set(block.id, {
+                id: block.id,
+                name: block.name,
+                input: block.input,
+                callTimestamp: r.timestamp,
+                callUuid: r.uuid,
+                result: null,
+                durationMs: null,
+                isAgent: block.name === 'Agent',
+                agentId: null,
+                agentStatus: null,
+                agentSummary: null
+              });
+            }
+          }
+        }
+      }
+
+      for (var k = 0; k < records.length; k++) {
+        var ru = records[k];
+        if (ru.type === 'user' && ru.message && Array.isArray(ru.message.content)) {
+          for (var m = 0; m < ru.message.content.length; m++) {
+            var rb = ru.message.content[m];
+            if (rb.type === 'tool_result') {
+              var entry = toolCalls.get(rb.tool_use_id);
+              if (!entry) continue;
+              entry.result = {
+                content: rb.content,
+                isError: rb.is_error === true,
+                resultTimestamp: ru.timestamp,
+                toolUseResult: ru.toolUseResult || null
+              };
+              entry.durationMs = new Date(ru.timestamp) - new Date(entry.callTimestamp);
+              if (entry.isAgent && ru.toolUseResult) {
+                entry.agentId = ru.toolUseResult.agentId || null;
+                entry.agentStatus = ru.toolUseResult.status || null;
+                if (entry.agentStatus === 'completed') {
+                  entry.agentSummary = {
+                    totalDurationMs: ru.toolUseResult.totalDurationMs,
+                    totalTokens: ru.toolUseResult.totalTokens,
+                    totalToolUseCount: ru.toolUseResult.totalToolUseCount,
+                    toolStats: ru.toolUseResult.toolStats
+                  };
+                }
+              }
+            }
+          }
+        }
+      }
+
+      return toolCalls;
+    }
+
+    function buildForest(records) {
+      // attachment lines are included so the parent/child chain stays
+      // intact; whether to *render* them is a display-layer decision.
+      var convo = records.filter(function (r) {
+        return r.type === 'user' || r.type === 'assistant' || r.type === 'attachment';
+      });
+      var byUuid = new Map();
+      for (var i = 0; i < convo.length; i++) {
+        var r = convo[i];
+        if (r.uuid) {
+          r.__children = [];
+          byUuid.set(r.uuid, r);
+        }
+      }
+      var roots = [];
+      for (var j = 0; j < convo.length; j++) {
+        var rr = convo[j];
+        if (!rr.uuid) continue;
+        if (rr.parentUuid && byUuid.has(rr.parentUuid)) {
+          byUuid.get(rr.parentUuid).__children.push(rr);
+        } else {
+          roots.push(rr);
+        }
+      }
+      function sortRec(list) {
+        list.sort(function (a, b) {
+          return new Date(a.timestamp) - new Date(b.timestamp);
+        });
+        for (var i2 = 0; i2 < list.length; i2++) sortRec(list[i2].__children);
+      }
+      sortRec(roots);
+      return roots;
+    }
+
+    function isToolResultMessage(r) {
+      return (
+        r.type === 'user' &&
+        r.message &&
+        Array.isArray(r.message.content) &&
+        r.message.content.length > 0 &&
+        r.message.content[0].type === 'tool_result'
+      );
+    }
+
+    function processTranscript(text) {
+      var parsed = parseJSONL(text);
+      var records = parsed.records;
+      var attachmentCount = records.filter(function (r) {
+        return r.type === 'attachment';
+      }).length;
+      var toolCalls = buildToolCallIndex(records);
+      var roots = buildForest(records);
+
+      var sessionId = null,
+        agentIdOfFile = null,
+        isSidechainFile = false;
+      for (var i = 0; i < records.length; i++) {
+        var r = records[i];
+        if (r.sessionId && !sessionId) sessionId = r.sessionId;
+        if (r.agentId && !agentIdOfFile) agentIdOfFile = r.agentId;
+        if (r.isSidechain) isSidechainFile = true;
+      }
+
+      return {
+        records: records,
+        parseErrorCount: parsed.parseErrorCount,
+        attachmentCount: attachmentCount,
+        toolCalls: toolCalls,
+        roots: roots,
+        meta: {
+          sessionId: sessionId,
+          agentIdOfFile: agentIdOfFile,
+          isSidechainFile: isSidechainFile,
+          lineCount: records.length
+        }
+      };
+    }
+
+    global.TranscriptRenderer = {
+      parseJSONL: parseJSONL,
+      extractText: extractText,
+      buildToolCallIndex: buildToolCallIndex,
+      buildForest: buildForest,
+      isToolResultMessage: isToolResultMessage,
+      processTranscript: processTranscript
+    };
+  })(window);
+
+  /* ---- UI logic ---- */
+  (function () {
+    var TR = window.TranscriptRenderer;
+
+    // fileBaseName -> processed transcript. Root files are ones without a
+    // matching dispatch pointing at them yet; subagent files are indexed by
+    // their own agentIdOfFile so any main file's Agent dispatch can find them.
+    var loadedBySessionRole = { mainFiles: [], byAgentId: new Map() };
+    var showSystem = false;
+    var filterText = '';
+
+    var timelineEl = document.getElementById('timeline');
+    var dropzoneEl = document.getElementById('dropzone');
+    var statsEl = document.getElementById('statsLine');
+    var warningsEl = document.getElementById('parseWarnings');
+    var fileInput = document.getElementById('fileInput');
+
+    document.getElementById('loadBtn').addEventListener('click', function () {
+      fileInput.click();
+    });
+    fileInput.addEventListener('change', function (e) {
+      handleFiles(e.target.files);
+      fileInput.value = '';
+    });
+
+    ['dragenter', 'dragover'].forEach(function (evt) {
+      document.body.addEventListener(evt, function (e) {
+        e.preventDefault();
+        dropzoneEl.classList.add('drag');
+      });
+    });
+    ['dragleave', 'drop'].forEach(function (evt) {
+      document.body.addEventListener(evt, function (e) {
+        e.preventDefault();
+        if (evt === 'drop') {
+          handleFiles(e.dataTransfer.files);
+        }
+        dropzoneEl.classList.remove('drag');
+      });
+    });
+
+    document.getElementById('expandAllBtn').addEventListener('click', function () {
+      document.querySelectorAll('details.row').forEach(function (d) {
+        d.open = true;
+      });
+    });
+    document.getElementById('collapseAllBtn').addEventListener('click', function () {
+      document.querySelectorAll('details.row').forEach(function (d) {
+        d.open = false;
+      });
+    });
+    document.getElementById('systemToggle').addEventListener('change', function (e) {
+      showSystem = e.target.checked;
+      renderAll();
+    });
+    document.getElementById('filterInput').addEventListener('input', function (e) {
+      filterText = e.target.value.trim().toLowerCase();
+      applyFilter();
+    });
+
+    function handleFiles(fileList) {
+      var files = Array.from(fileList || []);
+      if (!files.length) return;
+      var pending = files.length;
+      files.forEach(function (f) {
+        var reader = new FileReader();
+        reader.onload = function () {
+          ingestTranscript(f.name, reader.result);
+          pending--;
+          if (pending === 0) renderAll();
+        };
+        reader.readAsText(f);
+      });
+    }
+
+    function ingestTranscript(name, text) {
+      var processed = TR.processTranscript(text);
+      processed.__fileName = name;
+      if (processed.meta.isSidechainFile && processed.meta.agentIdOfFile) {
+        loadedBySessionRole.byAgentId.set(processed.meta.agentIdOfFile, processed);
+      } else {
+        loadedBySessionRole.mainFiles.push(processed);
+      }
+    }
+
+    function fmtTime(ts) {
+      if (!ts) return '';
+      var d = new Date(ts);
+      return d.toLocaleTimeString(undefined, { hour12: false }) + '.' + String(d.getMilliseconds()).padStart(3, '0');
+    }
+    function fmtDuration(ms) {
+      if (ms == null) return '';
+      if (ms < 1000) return ms + 'ms';
+      return (ms / 1000).toFixed(1) + 's';
+    }
+    function esc(s) {
+      return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+      });
+    }
+    function truncate(s, n) {
+      s = String(s || '');
+      return s.length > n ? s.slice(0, n) + '…' : s;
+    }
+
+    function keyParamSummary(toolCall) {
+      var input = toolCall.input || {};
+      switch (toolCall.name) {
+        case 'Bash':
+          return truncate(input.command, 90);
+        case 'Read':
+          return input.file_path + (input.offset ? ' @' + input.offset : '');
+        case 'Edit':
+        case 'Write':
+        case 'NotebookEdit':
+          return input.file_path;
+        case 'Grep':
+          return input.pattern + (input.path ? ' in ' + input.path : '');
+        case 'Glob':
+          return input.pattern;
+        case 'Agent':
+          return (input.subagent_type || 'general') + ' — ' + truncate(input.description, 60);
+        default:
+          return truncate(JSON.stringify(input), 90);
+      }
+    }
+
+    function renderToolResultDetail(toolCall) {
+      var html = '';
+      if (toolCall.result) {
+        var tur = toolCall.result.toolUseResult;
+        if (tur && (tur.stdout != null || tur.stderr != null)) {
+          if (tur.stdout) html += '<div class="field-label">stdout</div><pre>' + esc(tur.stdout) + '</pre>';
+          if (tur.stderr) html += '<div class="field-label">stderr</div><pre>' + esc(tur.stderr) + '</pre>';
+        } else {
+          html += '<div class="field-label">result</div><pre>' + esc(truncate(TR.extractText(toolCall.result.content), 4000)) + '</pre>';
+        }
+      } else {
+        html += '<div class="field-label">result</div><pre>(no result in this file — call may be mid-flight or truncated)</pre>';
+      }
+      html += '<div class="field-label">input</div><pre>' + esc(JSON.stringify(toolCall.input, null, 2)) + '</pre>';
+      return html;
+    }
+
+    function renderAgentSummary(toolCall) {
+      if (!toolCall.agentSummary) return '';
+      var s = toolCall.agentSummary;
+      var stats = s.toolStats || {};
+      var parts = [];
+      if (s.totalDurationMs != null) parts.push('<span><b>' + fmtDuration(s.totalDurationMs) + '</b> runtime</span>');
+      if (s.totalTokens != null) parts.push('<span><b>' + s.totalTokens.toLocaleString() + '</b> tokens</span>');
+      if (s.totalToolUseCount != null) parts.push('<span><b>' + s.totalToolUseCount + '</b> tool calls</span>');
+      Object.keys(stats).forEach(function (k) {
+        if (stats[k]) parts.push('<span><b>' + stats[k] + '</b> ' + k.replace(/Count$/, '') + '</span>');
+      });
+      return '<div class="stat-strip">' + parts.join('') + '</div>';
+    }
+
+    function renderToolCallNode(toolCall, depth) {
+      var statusChip;
+      if (!toolCall.result) {
+        statusChip = '<span class="chip pending">⏳ pending</span>';
+      } else if (toolCall.result.isError) {
+        statusChip = '<span class="chip err">✗ ' + fmtDuration(toolCall.durationMs) + '</span>';
+      } else {
+        statusChip = '<span class="chip ok">✓ ' + fmtDuration(toolCall.durationMs) + '</span>';
+      }
+
+      var isSubagent = toolCall.isAgent;
+      var glyphClass = isSubagent ? 'subagent' : 'tool';
+      var glyphLabel = isSubagent ? 'A' : '▸';
+
+      var wrapper = document.createElement('div');
+      wrapper.className = 'node tool-node';
+      wrapper.dataset.filterText = (toolCall.name + ' ' + JSON.stringify(toolCall.input || {})).toLowerCase();
+
+      var details = document.createElement('details');
+      details.className = 'row';
+      var summary = document.createElement('summary');
+      summary.className = 'row-head';
+      summary.innerHTML =
+        '<span class="glyph ' + glyphClass + '">' + glyphLabel + '</span>' +
+        '<span class="time">' + fmtTime(toolCall.callTimestamp) + '</span>' +
+        '<span class="summary-text"><span class="toolname">' + esc(toolCall.name) + '</span>' + esc(keyParamSummary(toolCall)) + '</span>' +
+        statusChip;
+      details.appendChild(summary);
+
+      var detailBody = document.createElement('div');
+      detailBody.className = 'detail';
+
+      if (isSubagent) {
+        var status = toolCall.agentStatus;
+        var childTranscript = toolCall.agentId ? loadedBySessionRole.byAgentId.get(toolCall.agentId) : null;
+
+        if (childTranscript) {
+          detailBody.innerHTML = renderAgentSummary(toolCall);
+          if (!toolCall.agentSummary) {
+            detailBody.innerHTML +=
+              '<div class="stat-strip"><span>subagent transcript loaded (' + childTranscript.meta.lineCount + ' lines) — dispatch was background, so completion stats live only in its own file, not this one</span></div>';
+          }
+          var childContainer = document.createElement('div');
+          childContainer.className = 'node-children';
+          childTranscript.roots.forEach(function (root) {
+            childContainer.appendChild(renderConvoNode(root, depth + 1, childTranscript.toolCalls));
+          });
+          detailBody.appendChild(childContainer);
+        } else {
+          detailBody.innerHTML = renderAgentSummary(toolCall);
+          var ph = document.createElement('div');
+          ph.className = 'placeholder';
+          ph.textContent = toolCall.agentId
+            ? 'expected file: agent-' + toolCall.agentId + '.jsonl — load it to expand this subagent\'s own timeline' + (status === 'async_launched' ? ' (dispatched in the background; no completion info exists in this file at all)' : '')
+            : 'this dispatch errored before an agent id was assigned — see result below';
+          ph.appendChild(document.createElement('div'));
+          detailBody.appendChild(ph);
+          var resultDiv = document.createElement('div');
+          resultDiv.innerHTML = renderToolResultDetail(toolCall);
+          detailBody.appendChild(resultDiv);
+        }
+      } else {
+        detailBody.innerHTML = renderToolResultDetail(toolCall);
+      }
+
+      details.appendChild(detailBody);
+      wrapper.appendChild(details);
+      return wrapper;
+    }
+
+    function renderConvoNode(record, depth, toolCallIndex) {
+      var wrapper = document.createElement('div');
+      wrapper.className = 'node';
+
+      if (record.type === 'attachment') {
+        if (showSystem) {
+          var attWrap = document.createElement('div');
+          var attKind = (record.content && record.content.kind) || 'system update';
+          attWrap.dataset.filterText = 'system attachment ' + attKind;
+          attWrap.innerHTML =
+            '<details class="row"><summary class="row-head"><span class="glyph thinking">·</span>' +
+            '<span class="time">' + fmtTime(record.timestamp) + '</span>' +
+            '<span class="summary-text" style="color:var(--ink-muted)">system: ' + esc(attKind) + '</span></summary>' +
+            '<div class="detail"><pre>' + esc(JSON.stringify(record.content, null, 2)) + '</pre></div></details>';
+          wrapper.appendChild(attWrap);
+        }
+        // when hidden, fall through and still render children below so the
+        // tree stays connected even though this node itself is invisible
+      } else if (record.type === 'user' && !TR.isToolResultMessage(record)) {
+        var text = TR.extractText(record.message && record.message.content);
+        var uWrap = document.createElement('div');
+        uWrap.dataset.filterText = text.toLowerCase();
+        uWrap.innerHTML =
+          '<div class="row"><div class="row-head" style="cursor:default"><span class="glyph user">U</span>' +
+          '<span class="time">' + fmtTime(record.timestamp) + '</span>' +
+          '<span class="summary-text">' + esc(truncate(text, 140)) + '</span></div></div>';
+        wrapper.appendChild(uWrap);
+      } else if (record.type === 'assistant') {
+        var blocks = (record.message && record.message.content) || [];
+        var textBlocks = blocks.filter(function (b) { return b.type === 'text'; });
+        var thinkingBlocks = blocks.filter(function (b) { return b.type === 'thinking'; });
+        var toolBlocks = blocks.filter(function (b) { return b.type === 'tool_use'; });
+
+        if (textBlocks.length || thinkingBlocks.length) {
+          var atext = textBlocks.map(function (b) { return b.text; }).join('\n');
+          var athink = thinkingBlocks.map(function (b) { return b.thinking; }).join('\n');
+          var aWrap = document.createElement('div');
+          aWrap.dataset.filterText = (atext + ' ' + athink).toLowerCase();
+          if (atext) {
+            aWrap.innerHTML =
+              '<div class="row"><div class="row-head" style="cursor:default"><span class="glyph assistant">A</span>' +
+              '<span class="time">' + fmtTime(record.timestamp) + '</span>' +
+              '<span class="summary-text">' + esc(truncate(atext, 140)) + '</span></div></div>';
+          } else if (athink) {
+            var td = document.createElement('details');
+            td.className = 'row';
+            td.innerHTML =
+              '<summary class="row-head"><span class="glyph thinking">…</span>' +
+              '<span class="time">' + fmtTime(record.timestamp) + '</span>' +
+              '<span class="summary-text" style="font-style:italic;color:var(--ink-muted)">(thinking, ' + athink.split(/\s+/).length + ' words)</span></summary>' +
+              '<div class="detail"><div class="prose-text">' + esc(athink) + '</div></div>';
+            aWrap.appendChild(td);
+          }
+          wrapper.appendChild(aWrap);
+        }
+
+        if (toolBlocks.length) {
+          var toolContainer = document.createElement('div');
+          toolContainer.className = 'node-children';
+          toolBlocks.forEach(function (b) {
+            var tc = toolCallIndex.get(b.id);
+            if (tc) toolContainer.appendChild(renderToolCallNode(tc, depth + 1));
+          });
+          wrapper.appendChild(toolContainer);
+        }
+      }
+
+      if (record.__children && record.__children.length) {
+        var childWrap = document.createElement('div');
+        record.__children.forEach(function (c) {
+          childWrap.appendChild(renderConvoNode(c, depth, toolCallIndex));
+        });
+        wrapper.appendChild(childWrap);
+      }
+
+      return wrapper;
+    }
+
+    function renderAll() {
+      timelineEl.innerHTML = '';
+      warningsEl.innerHTML = '';
+      var mains = loadedBySessionRole.mainFiles;
+
+      if (!mains.length && loadedBySessionRole.byAgentId.size === 0) {
+        dropzoneEl.style.display = '';
+        statsEl.textContent = '';
+        return;
+      }
+      dropzoneEl.style.display = 'none';
+
+      var totalLines = 0, totalTools = 0, totalErrors = 0;
+
+      mains.forEach(function (processed) {
+        if (processed.parseErrorCount) {
+          var w = document.createElement('div');
+          w.className = 'parse-warning';
+          w.textContent = processed.__fileName + ': ' + processed.parseErrorCount + ' line(s) failed to parse and were skipped.';
+          warningsEl.appendChild(w);
+        }
+        totalLines += processed.meta.lineCount;
+        processed.toolCalls.forEach(function (tc) {
+          totalTools++;
+          if (tc.result && tc.result.isError) totalErrors++;
+        });
+
+        var fileHeader = document.createElement('div');
+        fileHeader.style.cssText = 'font-family:var(--mono);font-size:0.72rem;color:var(--ink-muted);margin:0.9rem 0 0.3rem;';
+        fileHeader.textContent = processed.__fileName + ' — ' + processed.meta.lineCount + ' lines' + (processed.meta.sessionId ? ' · session ' + processed.meta.sessionId.slice(0, 8) : '');
+        timelineEl.appendChild(fileHeader);
+
+        processed.roots.forEach(function (root) {
+          timelineEl.appendChild(renderConvoNode(root, 0, processed.toolCalls));
+        });
+      });
+
+      statsEl.textContent = totalLines + ' lines · ' + totalTools + ' tool calls · ' + totalErrors + ' errors';
+      applyFilter();
+    }
+
+    function applyFilter() {
+      var nodes = timelineEl.querySelectorAll('[data-filter-text]');
+      nodes.forEach(function (n) {
+        if (!filterText) {
+          n.classList.remove('hidden-by-filter');
+          return;
+        }
+        var match = n.dataset.filterText.indexOf(filterText) !== -1;
+        n.classList.toggle('hidden-by-filter', !match);
+      });
+    }
+  })();
+</script>

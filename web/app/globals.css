@@ -1,0 +1,256 @@
+@import "tailwindcss";
+
+/*
+ * Dark "holographic" theme, ported from Agent Flow
+ * (patoles/agent-flow web/lib/colors.ts), plus a light variant below.
+ * The Canvas view's starfield/HUD look (lib/holo.ts) always stays dark by
+ * design - it's a fixed space-HUD aesthetic, not a themeable surface.
+ */
+:root {
+  --bg: #050510;
+  --surface: #0a0f1e;
+  --surface-2: #0d1526;
+  --surface-3: #111a30;
+  --ink: #aaeeff;
+  --ink-muted: #66ccff90;
+  --border: rgba(100, 200, 255, 0.15);
+  --accent: #66ccff;
+  --accent-ink: #050510;
+  --accent-2: #ffbb44;
+  --user: #66ccff;
+  --success: #66ffaa;
+  --error: #ff5566;
+  --subagent: #cc88ff;
+  --shadow: 0 0 20px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(100, 200, 255, 0.08);
+  --shadow-strong: 0 0 40px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(100, 200, 255, 0.1);
+
+  --glass-bg: rgba(10, 15, 30, 0.7);
+  --glass-border: rgba(100, 200, 255, 0.15);
+  --panel-bg: rgba(8, 12, 24, 0.85);
+  --glow-ok: color-mix(in srgb, var(--success) 55%, transparent);
+  --glow-error: color-mix(in srgb, var(--error) 55%, transparent);
+  --glow-pending: color-mix(in srgb, var(--accent-2) 60%, transparent);
+  --glow-agent: color-mix(in srgb, var(--subagent) 55%, transparent);
+  --glow-user: color-mix(in srgb, var(--user) 50%, transparent);
+
+  --title-gradient-start: #aaeeff;
+  --title-gradient-end: #66ccff;
+}
+
+:root[data-theme="light"] {
+  --bg: #f4f7fb;
+  --surface: #ffffff;
+  --surface-2: #eef2f8;
+  --surface-3: #e3e9f2;
+  --ink: #0f2a3d;
+  --ink-muted: #4a6478b0;
+  --border: rgba(20, 90, 130, 0.18);
+  --accent: #0e8fd6;
+  --accent-ink: #ffffff;
+  --accent-2: #d68a00;
+  --user: #0e8fd6;
+  --success: #1a9a63;
+  --error: #d6304a;
+  --subagent: #8a3fd6;
+  --shadow: 0 1px 3px rgba(15, 42, 61, 0.08), inset 0 1px 0 rgba(15, 42, 61, 0.02);
+  --shadow-strong: 0 8px 24px rgba(15, 42, 61, 0.12), inset 0 1px 0 rgba(15, 42, 61, 0.03);
+
+  --glass-bg: rgba(255, 255, 255, 0.75);
+  --glass-border: rgba(20, 90, 130, 0.15);
+  --panel-bg: rgba(255, 255, 255, 0.85);
+
+  --title-gradient-start: #0f2a3d;
+  --title-gradient-end: #0e8fd6;
+}
+
+@theme inline {
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+}
+
+body {
+  position: relative;
+  min-height: 100vh;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+::selection {
+  background: rgba(102, 204, 255, 0.3);
+  color: #ffffff;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(100, 200, 255, 0.15);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 200, 255, 0.3);
+}
+
+.app-shell {
+  min-height: 100vh;
+  background-image: radial-gradient(rgba(100, 200, 255, 0.05) 1px, transparent 1px);
+  background-size: 60px 60px;
+  background-position: center top;
+}
+
+.gradient-text {
+  background: linear-gradient(120deg, var(--title-gradient-start), var(--title-gradient-end));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.panel-glass {
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.focus-ring {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+}
+
+.focus-ring:focus-visible {
+  outline-color: var(--accent);
+}
+
+@keyframes pulse-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 1px var(--node-glow-color), 0 0 10px 1px var(--node-glow-color);
+  }
+  50% {
+    box-shadow: 0 0 0 1px var(--node-glow-color), 0 0 20px 5px var(--node-glow-color);
+  }
+}
+
+.pulse-glow {
+  animation: pulse-glow 1.8s ease-in-out infinite;
+}
+
+@keyframes live-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    box-shadow: 0 0 8px #ff4444, 0 0 16px rgba(255, 68, 68, 0.3);
+  }
+  50% {
+    opacity: 0.6;
+    box-shadow: 0 0 4px rgba(255, 68, 68, 0.4);
+  }
+}
+
+.live-pulse {
+  animation: live-pulse 1.6s ease-in-out infinite;
+}
+
+.graph-glass-scope .react-flow__node,
+.tree-flat-scope .react-flow__node {
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.graph-glass-scope .react-flow__edge-path,
+.tree-flat-scope .react-flow__edge-path {
+  transition: stroke 0.35s ease;
+}
+
+.graph-glass-scope .react-flow__controls {
+  overflow: hidden;
+  border-radius: 0.5rem;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg);
+  backdrop-filter: blur(10px);
+  box-shadow: var(--shadow);
+}
+
+.graph-glass-scope .react-flow__controls-button {
+  border: none;
+  border-bottom: 1px solid var(--glass-border);
+  background: transparent;
+  color: var(--ink);
+}
+
+.graph-glass-scope .react-flow__controls-button:hover {
+  background: rgba(102, 204, 255, 0.15);
+}
+
+.graph-glass-scope .react-flow__controls-button svg {
+  fill: var(--ink);
+}
+
+.graph-glass-scope .react-flow__minimap {
+  border-radius: 0.5rem;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg) !important;
+  backdrop-filter: blur(10px);
+  box-shadow: var(--shadow);
+}
+
+.tree-flat-scope .react-flow__controls {
+  overflow: hidden;
+  border-radius: 0.5rem;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.tree-flat-scope .react-flow__controls-button {
+  border: none;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+  color: var(--ink);
+}
+
+.tree-flat-scope .react-flow__controls-button:hover {
+  background: var(--surface-2);
+}
+
+.tree-flat-scope .react-flow__controls-button svg {
+  fill: var(--ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
