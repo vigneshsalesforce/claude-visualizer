@@ -1,6 +1,6 @@
 {
   "name": "@vignesheakanathan/claude-visualizer",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Interactive visualizer for Claude Code transcript files with timeline and graph views",
   "license": "MIT",
   "author": "Vignesh Eakanathan",
