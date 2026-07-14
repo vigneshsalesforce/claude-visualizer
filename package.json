@@ -4,13 +4,13 @@
   "description": "Interactive visualizer for Claude Code transcript files with timeline and graph views",
   "license": "MIT",
   "author": "Vignesh Eakanathan",
-  "homepage": "https://github.com/yourusername/claude-demo#readme",
+  "homepage": "https://github.com/vigneshsalesforce/claude-visualizer#readme",
   "repository": {
     "type": "git",
-    "url": "https://github.com/yourusername/claude-demo.git"
+    "url": "git+https://github.com/vigneshsalesforce/claude-visualizer.git"
   },
   "bugs": {
-    "url": "https://github.com/yourusername/claude-demo/issues"
+    "url": "https://github.com/vigneshsalesforce/claude-visualizer/issues"
   },
   "keywords": [
     "claude",
@@ -22,7 +22,7 @@
     "graph"
   ],
   "bin": {
-    "claude-visualizer": "./bin/cli.js"
+    "claude-visualizer": "bin/cli.js"
   },
   "files": [
     "bin",
