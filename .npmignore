@@ -44,4 +44,4 @@ docs/
 examples/
 *.md
 !README.md
-!NPM_README.md
+!THIRD_PARTY_NOTICES.md

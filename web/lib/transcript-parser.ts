@@ -1,8 +1,6 @@
 /**
  * Parses Claude Code's native JSONL session transcript format and builds a
- * turn tree + tool-call index for rendering. TypeScript port of the
- * original visualizer/shared_render.js (see that file for the reference
- * implementation this was verified against).
+ * turn tree + tool-call index for rendering.
  */
 
 export type ContentBlock =

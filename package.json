@@ -27,9 +27,9 @@
   "files": [
     "bin",
     "web",
-    "replay.html",
-    "shared_render.js",
-    "README.md"
+    "README.md",
+    "LICENSE-APACHE",
+    "THIRD_PARTY_NOTICES.md"
   ],
   "scripts": {
     "postinstall": "node bin/postinstall.js",

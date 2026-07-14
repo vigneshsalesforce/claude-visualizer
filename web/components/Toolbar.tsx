@@ -122,7 +122,7 @@ export function Toolbar({
     >
       <div className="flex flex-wrap items-center gap-3">
         <div className="mr-1 min-w-[190px]">
-          <h1 className="gradient-text font-mono text-[15px] font-bold leading-tight tracking-wide">AGENT VISUALIZER</h1>
+          <h1 className="gradient-text font-mono text-[15px] font-bold leading-tight tracking-wide">CLAUDE CODE VISUALIZER</h1>
         </div>
         <StatusDot status={status} />
         <ViewToggle view={view} onViewChange={onViewChange} />

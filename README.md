@@ -1,118 +1,97 @@
-# Claude Code Visualizer
+<p align="center">
+  <img src="./assets/banner.svg" alt="Claude Code Visualizer" width="100%" />
+</p>
 
-A homemade alternative to [Agent Flow](https://github.com/patoles/agent-flow)
-(see `../SETUP.md` for why we didn't just use that directly). Claude Code
-already writes a complete transcript of every session to disk as JSONL — no
-custom hook required — so both tools here just read that file.
+<p align="center">
+  <a href="https://www.npmjs.com/package/@vignesheakanathan/claude-visualizer"><img src="https://img.shields.io/npm/v/@vignesheakanathan/claude-visualizer.svg" alt="npm version"></a>
+  <a href="./LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT License"></a>
+  <img src="https://img.shields.io/badge/built%20for-Claude%20Code-66ccff.svg" alt="Built for Claude Code">
+</p>
 
-## Install via npm
+A live, in-browser view of a [Claude Code](https://claude.com/claude-code) session — timeline, tool calls, subagent
+dispatches, and cost, updating as the session runs. Claude Code already writes a complete transcript of every
+session to disk as JSONL; this reads that file directly, so there's no hook or setting to configure.
+
+> **Scope:** this project is built specifically for Claude Code's own transcript format
+> (`~/.claude/projects/**/*.jsonl`). It doesn't support other agent frameworks or CLIs.
+
+## Screenshots
+
+| Canvas | Tree | Log |
+| --- | --- | --- |
+| ![Canvas view](./docs/screenshots/canvas-view.png) | ![Tree view](./docs/screenshots/tree-view.png) | ![Log view](./docs/screenshots/log-view.png) |
+
+- **Canvas** — an animated satellite view: the active turn pulses at the center, tool calls orbit around it as they
+  happen, with a live status bar and elapsed-time strip along the bottom.
+- **Tree** — every tool grouped and counted (e.g. `Edit · 17x`), so you can see at a glance what a session spent its
+  time doing.
+- **Log** — the classic vertical timeline: expandable turns, tool calls with duration/success/error, filterable by
+  text.
+
+## Features
+
+- **Live** — tails the transcript over Server-Sent Events; new turns, tool calls, and subagent dispatches appear
+  within seconds, no refresh.
+- **Subagent-aware** — a dispatched subagent's own transcript nests inside the turn that spawned it.
+- **Multiple sessions** — switch between concurrently active sessions with tabs.
+- **Light/dark theme**, filtering, expand/collapse, and a running token/error count.
+- Nothing leaves your machine — it's a local dev server reading a local file.
+
+## Install & run
+
+Requires [Node.js](https://nodejs.org/) 18 or later.
+
+### Windows (PowerShell)
+
+```powershell
+npm install -g @vignesheakanathan/claude-visualizer
+cd path\to\your\project      # the directory you run Claude Code from
+claude-visualizer
+```
+
+### macOS (Terminal)
 
 ```bash
-npm install -g claude-code-visualizer
-claude-visualizer  # Auto-detect and visualize your latest session
+npm install -g @vignesheakanathan/claude-visualizer
+cd path/to/your/project      # the directory you run Claude Code from
+claude-visualizer
 ```
 
-See [NPM_README.md](./NPM_README.md) for full installation and usage instructions.
+Then open the URL it prints (`http://localhost:3000` by default). The first run installs the bundled web app's
+dependencies automatically — that can take a minute; every run after that starts immediately.
 
-## `replay.html` — static replay, works today
+`claude-visualizer` auto-detects the most recently modified transcript for the current directory. To point it at a
+specific file instead:
 
-Open it in a browser (or use the published Artifact link), then drop in one
-or more `.jsonl` transcript files:
-
-- `~/.claude/projects/<sanitized-cwd>/<session-id>.jsonl` — a main session
-- `~/.claude/projects/<sanitized-cwd>/<session-id>/subagents/agent-<id>.jsonl` — a subagent run
-
-You get an interactive timeline: user/assistant turns, tool calls (name, key
-params, duration, success/error), and any `Agent` dispatch expands into the
-matching subagent's own nested timeline if you also load its file (matched
-by the `agentId` embedded in the filename).
-
-Runs entirely client-side — nothing you load ever leaves the page. No
-install required, which is the whole point of keeping it around alongside
-the richer app below.
-
-Known limits:
-- A dispatched-in-the-background subagent (`run_in_background: true`) never
-  gets its completion stats (duration/tokens) recorded in the *main*
-  transcript — only in the subagent's own file. The viewer says so
-  explicitly rather than showing a stale "still running."
-- No auto-discovery of sibling files — the page has no filesystem access,
-  so you load each file yourself.
-
-`shared_render.js` is the reference implementation its parsing logic is
-based on (also handy for quick Node-based checks against a transcript) —
-`web/lib/transcript-parser.ts` is a verified TypeScript port of the same
-logic, not a live import of this file.
-
-## `web/` — live view, Next.js + Tailwind + Motion
-
-The animated, live-tailing app. Replaces the earlier `tail_server.py` +
-`viewer.html` prototype (Python backend, vanilla JS/CSS frontend) with a
-single Next.js app: a TypeScript port of the same tailing logic runs as an
-API route (`app/api/events/route.ts`, Server-Sent Events, stdlib `fs`
-polling — no Claude Code hooks or settings touched, same as before), and the
-frontend is componentized with Framer Motion for the live-updating timeline,
-expand/collapse, and status indicator.
-
-```
-cd visualizer/web
-npm install
-npm run dev            # auto-detects the current session from cwd
-# or:
-TRANSCRIPT_PATH=/path/to/session.jsonl npm run dev -- --port 3100
+```powershell
+# Windows
+$env:TRANSCRIPT_PATH="C:\Users\you\.claude\projects\...\session.jsonl"; claude-visualizer
 ```
 
-Then open `http://localhost:3000` (or whatever port you passed). It streams
-the full backlog first, then stays live — new turns, tool calls, and
-subagent dispatches appear as they're written, no refresh needed.
+```bash
+# macOS/Linux
+TRANSCRIPT_PATH=~/.claude/projects/.../session.jsonl claude-visualizer
+```
 
-Two views, switchable from the toolbar:
-- **Timeline** — the original vertical list: expand/collapse, filter,
-  auto-scroll.
-- **Graph** — an Agent-Flow-style node canvas (`@xyflow/react`): one node
-  per turn and per tool call, connected left-to-right in sequence, with
-  each subagent dispatch branching downward into its own connected
-  sub-chain. Pan/zoom/minimap, animated flowing edges, nodes scale/fade in
-  as they arrive live, click any node for a detail side-panel (input/result,
-  or full turn text). Violet-bordered nodes are subagent dispatches;
-  duration chips are green/red/hourglass for done/errored/in-flight.
+Pass `--port 3100` (or any port) if 3000 is already taken.
 
-**Verified live, against this repo's own (very long) session**, while it was
-being built:
-- Made a new tool call and watched it appear in an already-open page within
-  seconds, no reload — same test as the Python prototype, same result, run
-  again after adding the graph view.
-- Along the way, hit and fixed a real bug: this session's conversation is a
-  300+ turn linear chain, and rendering it by recursing one React component
-  into the next per turn (cheap in the old vanilla-DOM version) blew the
-  call stack once the tree got deep enough with Framer Motion's
-  `AnimatePresence` wrapping each level. Fixed by flattening the turn chain
-  into a plain array before rendering (`flattenTurns` in
-  `lib/transcript-parser.ts`) — turns were never visually indented for
-  chaining anyway, only tool calls and subagent nesting are, so nothing
-  about the rendered output changed, just how it gets there.
-- Confirmed the graph view against the same live session: node/edge counts
-  match the known data (7 subagent-dispatch nodes = the 7 subagents this
-  session actually ran), 100% of edges render with the flowing-dash
-  animation, and click-to-inspect opens the correct detail panel.
-- On a 300+ turn session the graph is wide (one row per turn/tool call);
-  `fitView`'s default `minZoom` keeps individual nodes legible rather than
-  shrinking everything to fit on screen at once, so panning + the minimap
-  is the intended way to navigate history, not an all-at-once overview.
+## Verify it's working
 
-Known limits (real, not hedging):
-- **Auto-detect uses the directory you run it from**, not the directory
-  your Claude Code session started in. If they differ, set `TRANSCRIPT_PATH`
-  explicitly — auto-detect looks in
-  `~/.claude/projects/<cwd-with-slashes-as-dashes>/`.
-- **Rendering reprocesses the whole accumulated transcript on every
-  animation frame that has new lines**, not just the new lines (same
-  tradeoff as the Python prototype, ported as-is). Fine through thousands of
-  lines (verified); a very long-running session could eventually make each
-  frame's reprocessing noticeably slower.
-- Same background-dispatch caveat as `replay.html`: a subagent's completion
-  stats only ever land in *its own* file, and the live view says so rather
-  than implying it's stuck.
-- Nothing here is deployed anywhere — it's a local dev server
-  (`npm run dev`/`npm run build && npm run start`), not something with a
-  shareable link the way `replay.html`'s Artifact is.
+1. Run `claude-visualizer` from a directory where you have an active or recent Claude Code session.
+2. Open the printed URL — you should see the **LIVE** indicator in the top-left turn green, and the session's
+   existing history rendered in the Canvas view.
+3. Switch to a Claude Code session in that same directory and send it a prompt that triggers a tool call.
+4. Watch the browser tab — the new turn and tool call should appear within a couple of seconds, with no page
+   reload.
+
+If step 2 shows "waiting for events..." for longer than a few seconds, your current directory likely doesn't match
+where the Claude Code session was started — pass `TRANSCRIPT_PATH` explicitly (see above).
+
+## Contributing
+
+Contributions are welcome — see [CONTRIBUTING.md](./CONTRIBUTING.md) for local setup and the PR process.
+
+## License
+
+MIT — see [LICENSE](./LICENSE). A few rendering techniques in the Canvas view are ported from a third-party
+Apache-2.0-licensed project; see [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md) for details.

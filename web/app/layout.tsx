@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Agent Visualizer",
+  title: "Claude Code Visualizer",
   description: "Live view of a Claude Code session transcript.",
 };
 
